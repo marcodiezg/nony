@@ -21,3 +21,29 @@ jobs:
           command: flutter build apk --release
       - store_artifacts:
           path: build/app/outputs/flutter-apk/app-release.apk
+
+          jobs:
+  build:
+    # ...
+    working_directory: ~/project
+    docker:
+      - image: circleci/android:api-31
+    environment:
+      JVM_OPTS: -Xmx3200m
+      GRADLE_OPTS: -Dorg.gradle.daemon=false
+    steps:
+      - checkout
+      - run:
+          name: Setup Emulator
+          command: |
+            echo y | android update sdk --no-ui --all --filter "sys-img-x86-google_apis-31"
+            echo no | android create avd --force -n test -t "android-google_apis-31" --abi "x86"
+            emulator -avd test -no-audio -no-window:
+            # wait for emulator to finish startup
+            circle-android wait-for-boot
+            # unlock the emulator screen
+            sleep 30 && adb shell input keyevent 82 &
+      - run:
+          name: Run Tests
+          command: ./gradlew connectedAndroidTest
+
